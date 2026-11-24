@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SPEED RUN: Carrera Contra el Tiempo | Unidad Educativa El Libertador</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Google Fonts: Fredoka & Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(180deg, #1cb5e0 0%, #38bdf8 60%, #bae6fd 100%);
+    }
+    .font-game {
+      font-family: 'Fredoka', sans-serif;
+    }
+    #game-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 1;
+    }
+    /* Custom Obby / Roblox-inspired UI styles */
+    .obby-card {
+      background: rgba(255, 255, 255, 0.96);
+      border: 4px solid #0f172a;
+      box-shadow: 0 10px 0 #0f172a, 0 20px 35px rgba(0, 0, 0, 0.35);
+      border-radius: 24px;
+    }
+    .obby-btn {
+      border: 3px solid #0f172a;
+      box-shadow: 0 5px 0 #0f172a;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.12s ease;
+      font-family: 'Fredoka', sans-serif;
+      letter-spacing: 0.02em;
+    }
+    .obby-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 7px 0 #0f172a;
+      filter: brightness(1.05);
+    }
+    .obby-btn:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #0f172a;
+    }
+    .obby-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .text-stroke {
+      text-shadow: 
+        -2px -2px 0 #0f172a,  
+         2px -2px 0 #0f172a,
+        -2px  2px 0 #0f172a,
+         2px  2px 0 #0f172a,
+         0px  4px 0 #0f172a;
+    }
+    .text-stroke-sm {
+      text-shadow: 
+        -1.5px -1.5px 0 #0f172a,  
+         1.5px -1.5px 0 #0f172a,
+        -1.5px  1.5px 0 #0f172a,
+         1.5px  1.5px 0 #0f172a;
+    }
+    .rainbow-bar {
+      background: linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e, #06b6d4, #3b82f6, #a855f7);
+    }
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+    .animate-float {
+      animation: floatSlow 2.6s ease-in-out infinite;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-10px); }
+      40% { transform: translateX(10px); }
+      60% { transform: translateX(-7px); }
+      80% { transform: translateX(7px); }
+    }
+    .animate-shake {
+      animation: shake 0.45s ease-in-out;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.85); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    /* Touch Controls */
+    .touch-pad-btn {
+      background: rgba(15, 23, 42, 0.65);
+      border: 3px solid rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(4px);
+      color: white;
+      border-radius: 18px;
+      touch-action: manipulation;
+    }
+    .touch-pad-btn:active, .touch-pad-btn.pressed {
+      background: rgba(6, 182, 212, 0.85);
+      transform: scale(0.94);
+    }
+    /* Scrollbar styling for modals */
+    .custom-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #e2e8f0;
+      border-radius: 10px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #0284c7;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Three.js Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- ==================== 1. START SCREEN & REGISTRATION ==================== -->
+  <div id="start-screen" class="fixed inset-0 z-30 flex items-center justify-center p-3 sm:p-5 overflow-y-auto bg-sky-900/35 backdrop-blur-[2px]">
+    <div class="obby-card w-full max-w-2xl p-4 sm:p-7 my-auto animate-pop relative overflow-hidden">
+      <!-- Rainbow Top Accent -->
+      <div class="rainbow-bar h-3 w-full absolute top-0 left-0"></div>
+
+      <!-- Top Header Badge & Teacher Panel Button -->
+      <div class="flex flex-wrap items-center justify-between gap-2 mt-1 mb-3">
+        <span class="inline-flex items-center gap-1.5 bg-amber-300 border-2 border-slate-900 px-3 py-1 rounded-full text-xs sm:text-sm font-extrabold text-slate-900 shadow-sm">
+          🏫 UNIDAD EDUCATIVA EL LIBERTADOR
+        </span>
+        <button id="btn-open-teacher" type="button" class="text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border-2 border-slate-900 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5">
+          📊 Panel Docente / Resultados
+        </button>
+      </div>
+
+      <!-- Game Title -->
+      <div class="text-center mb-4">
+        <div class="inline-block bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 border-3 border-slate-900 rounded-2xl px-4 py-2 shadow-md transform -rotate-1">
+          <h1 class="font-game text-2xl sm:text-4xl font-bold text-white text-stroke tracking-wide">
+            SPEED RUN: CARRERA CONTRA EL TIEMPO
+          </h1>
+        </div>
+        <p class="mt-2 text-xs sm:text-sm font-bold text-slate-700">
+          ¡Supera el circuito parkour 3D y resuelve las 10 estaciones matemáticas!
+        </p>
+      </div>
+
+      <!-- Institutional Details Box -->
+      <div class="bg-sky-50 border-2 border-sky-300 rounded-2xl p-3 sm:p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
+        <div>
+          <span class="font-bold text-sky-900">🏛️ Institución:</span>
+          <span class="text-slate-800 font-semibold">Unidad Educativa El Libertador</span>
+        </div>
+        <div>
+          <span class="font-bold text-sky-900">🎓 Curso:</span>
+          <span class="text-slate-800 font-semibold">10mo EGB</span>
+        </div>
+        <div class="sm:col-span-2">
+          <span class="font-bold text-sky-900">📘 Asignatura:</span>
+          <span class="text-slate-800 font-semibold">Desarrollo del Pensamiento – Razonamiento Matemático</span>
+        </div>
+        <div>
+          <span class="font-bold text-sky-900">👩‍🏫 Docente:</span>
+          <span class="text-slate-800 font-semibold">Ing. Andrea Mina Zavala</span>
+        </div>
+        <div>
+          <span class="font-bold text-sky-900">🏁 Actividad:</span>
+          <span class="text-slate-800 font-semibold">SPEED RUN – Carrera contra el tiempo</span>
+        </div>
+      </div>
+
+      <!-- Student Registration Form -->
+      <div class="space-y-3 sm:space-y-4">
+        <!-- Full Name -->
+        <div>
+          <label for="input-student-name" class="block text-sm font-extrabold text-slate-900 mb-1">
+            👤 Nombre y apellido completos <span class="text-red-600">*</span>
+          </label>
+          <input
+            id="input-student-name"
+            type="text"
+            placeholder="Ej. Mateo Sebastián Morales Ruiz"
+            autocomplete="off"
+            class="w-full px-4 py-2.5 sm:py-3 rounded-xl border-3 border-slate-900 bg-white text-slate-900 font-bold text-sm sm:text-base focus:outline-none focus:ring-4 focus:ring-cyan-400"
+          />
+        </div>
+
+        <!-- Parallel & Avatar Selection Row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <!-- Parallel Selection -->
+          <div>
+            <label class="block text-sm font-extrabold text-slate-900 mb-1">
+              🏫 Selecciona tu Paralelo <span class="text-red-600">*</span>
+            </label>
+            <div class="grid grid-cols-2 gap-2.5" id="parallel-selector">
+              <button type="button" data-parallel="A" class="parallel-btn obby-btn py-2.5 rounded-xl bg-slate-100 text-slate-900 font-bold text-base">
+                Paralelo A
+              </button>
+              <button type="button" data-parallel="B" class="parallel-btn obby-btn py-2.5 rounded-xl bg-slate-100 text-slate-900 font-bold text-base">
+                Paralelo B
+              </button>
+            </div>
+          </div>
+
+          <!-- Avatar Selection -->
+          <div>
+            <label class="block text-sm font-extrabold text-slate-900 mb-1">
+              🏃 Elige tu Corredor <span class="text-red-600">*</span>
+            </label>
+            <div class="grid grid-cols-2 gap-2.5" id="avatar-selector">
+              <button type="button" data-avatar="chico" class="avatar-btn obby-btn py-2.5 rounded-xl bg-cyan-400 text-slate-900 font-bold text-base ring-4 ring-amber-400">
+                👦 Chico
+              </button>
+              <button type="button" data-avatar="chica" class="avatar-btn obby-btn py-2.5 rounded-xl bg-slate-100 text-slate-900 font-bold text-base">
+                👧 Chica
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Validation Message Box -->
+        <div id="start-validation-msg" class="hidden bg-red-100 border-2 border-red-500 text-red-800 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold text-center">
+          ⚠️ Por favor ingresa tu nombre y apellido completos y selecciona tu paralelo (A o B) antes de comenzar.
+        </div>
+
+        <!-- Controls Quick Hint -->
+        <div class="bg-amber-50 border-2 border-amber-300 rounded-xl px-3 py-2 text-xs text-slate-700 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-semibold">
+          <span>⬆️/W: Avanzar</span>
+          <span>⬅️➡️/AD: Moverse</span>
+          <span>Espacio: Saltar</span>
+          <span>⬇️/S: Agacharse</span>
+          <span>📱 Táctil disponible</span>
+        </div>
+
+        <!-- Big Start Button -->
+        <button id="btn-start-game" type="button" class="obby-btn w-full py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-lime-400 via-emerald-400 to-green-500 text-slate-950 font-game text-xl sm:text-2xl font-extrabold tracking-wide cursor-pointer">
+          🚀 ¡COMENZAR CARRERA!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 2. IN-GAME HUD ==================== -->
+  <div id="game-hud" class="hidden fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-2.5 sm:p-4">
+    <!-- Top Bar -->
+    <div class="flex flex-col gap-2 w-full max-w-6xl mx-auto">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <!-- Player Badge -->
+        <div class="pointer-events-auto bg-slate-900/90 border-2 border-cyan-400 text-white px-3 py-1.5 rounded-2xl shadow-lg flex items-center gap-2">
+          <span id="hud-avatar-icon" class="text-lg">🏃</span>
+          <div class="leading-tight">
+            <div id="hud-player-name" class="text-xs sm:text-sm font-extrabold text-cyan-300 truncate max-w-[150px] sm:max-w-[230px]">Estudiante</div>
+            <div id="hud-player-parallel" class="text-[11px] font-bold text-amber-300">10mo EGB - Paralelo A</div>
+          </div>
+        </div>
+
+        <!-- Center Stopwatch & Speed Boost Indicator -->
+        <div class="flex items-center gap-2">
+          <div class="bg-slate-900/90 border-2 border-amber-400 text-white px-3.5 py-1.5 rounded-2xl shadow-lg flex items-center gap-2">
+            <span class="text-base sm:text-lg">⏱️</span>
+            <div>
+              <div class="text-[10px] uppercase tracking-wider text-amber-300 font-bold">Tiempo Total</div>
+              <div id="hud-total-time" class="font-game text-base sm:text-xl font-bold text-white leading-none">00:00</div>
+            </div>
+          </div>
+
+          <div id="hud-boost-badge" class="hidden bg-gradient-to-r from-orange-500 to-amber-400 border-2 border-slate-900 text-slate-950 px-3 py-1.5 rounded-2xl shadow-lg font-game font-bold text-xs sm:text-sm animate-bounce">
+            ⚡ ¡TURBO ACTIVO!
+          </div>
+        </div>
+
+        <!-- Right Controls: Coins (Visual only), Checkpoint & Audio Toggle -->
+        <div class="pointer-events-auto flex items-center gap-2">
+          <div class="bg-slate-900/90 border-2 border-yellow-400 text-yellow-300 px-3 py-1.5 rounded-2xl shadow-lg flex items-center gap-1.5 font-game font-bold text-sm sm:text-base" title="Monedas recolectadas (decorativo)">
+            <span>🪙</span>
+            <span id="hud-coins">0</span>
+          </div>
+          <button id="btn-respawn" type="button" title="Volver al último Checkpoint" class="obby-btn bg-sky-400 text-slate-950 px-2.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold">
+            🚩 Checkpoint
+          </button>
+          <button id="btn-toggle-audio" type="button" title="Activar/Silenciar Sonido" class="obby-btn bg-amber-300 text-slate-950 px-2.5 py-1.5 rounded-xl text-sm sm:text-base font-bold">
+            🔊
+          </button>
+        </div>
+      </div>
+
+      <!-- 10-Station Progress Bar -->
+      <div class="bg-slate-900/85 border-2 border-slate-700 rounded-2xl p-2 sm:px-4 shadow-lg">
+        <div class="flex items-center justify-between text-xs font-bold text-white mb-1.5">
+          <span id="hud-station-status" class="text-cyan-300">🏁 Estación actual: 1 de 10</span>
+          <span id="hud-remaining-status" class="text-amber-300">Faltan 10 desafíos para la meta</span>
+        </div>
+        <div id="hud-progress-segments" class="grid grid-cols-10 gap-1.5">
+          <!-- 10 segments generated via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Instruction Banner & Mobile Touch Controls -->
+    <div class="flex flex-col items-center gap-2 w-full">
+      <!-- Dynamic Action Prompt -->
+      <div id="hud-action-banner" class="bg-slate-900/85 border-2 border-cyan-400 text-white px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold shadow-lg text-center">
+        🏃 ¡Corre hacia el Portal de la Estación 1! (Usa Flechas / WASD + Espacio)
+      </div>
+
+      <!-- Mobile / Tablet Touch Controls -->
+      <div id="touch-controls" class="pointer-events-auto flex md:hidden items-center justify-between w-full max-w-lg px-2 pb-1">
+        <!-- D-Pad Left / Right -->
+        <div class="flex items-center gap-2">
+          <button id="touch-left" type="button" class="touch-pad-btn w-14 h-14 flex items-center justify-center text-2xl font-bold">⬅️</button>
+          <button id="touch-right" type="button" class="touch-pad-btn w-14 h-14 flex items-center justify-center text-2xl font-bold">➡️</button>
+        </div>
+        <!-- Action Buttons: Crouch, Forward, Jump -->
+        <div class="flex items-center gap-2">
+          <button id="touch-down" type="button" class="touch-pad-btn px-3 h-14 flex flex-col items-center justify-center text-xs font-bold">
+            <span class="text-lg">⬇️</span>
+            <span>Agachar</span>
+          </button>
+          <button id="touch-up" type="button" class="touch-pad-btn px-4 h-14 flex flex-col items-center justify-center text-xs font-bold bg-emerald-600/80">
+            <span class="text-lg">⬆️</span>
+            <span>Correr</span>
+          </button>
+          <button id="touch-jump" type="button" class="touch-pad-btn px-4 h-14 flex flex-col items-center justify-center text-xs font-bold bg-amber-500/85 text-slate-950">
+            <span class="text-lg">⏫</span>
+            <span>Saltar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 3. MATH STATION CHALLENGE MODAL ==================== -->
+  <div id="math-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-sm overflow-y-auto">
+    <div id="math-modal-card" class="obby-card w-full max-w-2xl p-4 sm:p-6 my-auto animate-pop relative">
+      <!-- Station Header & 3-Minute Timer -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b-2 border-slate-200">
+        <div class="flex items-center gap-2">
+          <span id="modal-station-badge" class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-game font-bold px-3.5 py-1 rounded-xl border-2 border-slate-900 text-sm sm:text-base">
+            ESTACIÓN 1 / 10
+          </span>
+          <span id="modal-topic-badge" class="bg-amber-200 text-slate-900 font-bold px-2.5 py-1 rounded-lg text-xs border border-slate-900">
+            Porcentajes
+          </span>
+        </div>
+
+        <!-- 3-Minute Countdown -->
+        <div id="modal-timer-box" class="flex items-center gap-1.5 bg-slate-900 text-white px-3.5 py-1.5 rounded-xl border-2 border-cyan-400">
+          <span class="text-sm">⏳</span>
+          <span class="text-xs font-bold text-cyan-300">Tiempo estación:</span>
+          <span id="modal-station-timer" class="font-game text-base sm:text-lg font-bold text-amber-300">03:00</span>
+        </div>
+      </div>
+
+      <!-- Problem Statement -->
+      <div class="bg-sky-50 border-2 border-sky-300 rounded-2xl p-3.5 sm:p-4 mb-4">
+        <p id="modal-question-text" class="text-slate-900 font-bold text-sm sm:text-lg leading-relaxed">
+          Enunciado del ejercicio matemático...
+        </p>
+      </div>
+
+      <!-- 4 Options Grid -->
+      <div id="modal-options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 mb-4">
+        <!-- Options injected dynamically -->
+      </div>
+
+      <!-- Feedback Banner (shown after confirming) -->
+      <div id="modal-feedback-box" class="hidden rounded-2xl p-3.5 mb-4 border-3 font-bold text-center text-sm sm:text-base">
+      </div>
+
+      <!-- Confirm / Continue Action Buttons -->
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <button id="btn-confirm-answer" type="button" disabled class="obby-btn w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-game text-lg sm:text-xl font-extrabold">
+          ✅ CONFIRMAR RESPUESTA
+        </button>
+        <button id="btn-continue-race" type="button" class="hidden obby-btn w-full py-3 sm:py-3.5 rounded-2xl bg-gradient-to-r from-lime-400 to-emerald-500 text-slate-950 font-game text-lg sm:text-xl font-extrabold">
+          🏃 ¡CONTINUAR CARRERA!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 4. FINISH LINE CELEBRATION OVERLAY ==================== -->
+  <div id="finish-celebration-screen" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+    <div class="obby-card max-w-lg w-full p-6 text-center animate-pop relative overflow-hidden">
+      <div class="rainbow-bar h-3 w-full absolute top-0 left-0"></div>
+      <div class="text-5xl sm:text-6xl mb-2 animate-bounce">🏆🎉🏁</div>
+      <h2 class="font-game text-2xl sm:text-4xl font-extrabold text-amber-400 text-stroke mb-2">
+        ¡META ALCANZADA!
+      </h2>
+      <p class="text-slate-700 font-bold text-sm sm:text-base mb-5">
+        ¡Increíble recorrido! Has completado todas las 10 estaciones matemáticas de <span class="text-sky-600">SPEED RUN: Carrera contra el tiempo</span>.
+      </p>
+      <button id="btn-show-final-result" type="button" class="obby-btn w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-500 text-white font-game text-xl sm:text-2xl font-extrabold text-stroke-sm">
+        📋 VER MI RESULTADO FINAL
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 5. FINAL SCREENSHOT-READY REPORT CARD ==================== -->
+  <div id="final-report-screen" class="hidden fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-5 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+    <div id="certificate-card" class="obby-card w-full max-w-2xl p-4 sm:p-7 my-auto animate-pop relative overflow-hidden bg-white">
+      <div class="rainbow-bar h-3 w-full absolute top-0 left-0"></div>
+
+      <!-- Institutional Header -->
+      <div class="text-center border-b-2 border-slate-200 pb-3 mb-4 mt-1">
+        <div class="inline-block bg-amber-300 border-2 border-slate-900 px-3 py-0.5 rounded-full text-xs font-extrabold text-slate-900 mb-1">
+          REPORTE OFICIAL DE EVALUACIÓN
+        </div>
+        <h2 class="font-game text-xl sm:text-2xl font-extrabold text-slate-900">
+          UNIDAD EDUCATIVA EL LIBERTADOR
+        </h2>
+        <p class="text-xs sm:text-sm font-bold text-sky-700">
+          Asignatura: Desarrollo del Pensamiento – Razonamiento Matemático
+        </p>
+        <p class="text-xs font-semibold text-slate-600">
+          Actividad: SPEED RUN – Carrera contra el tiempo • Docente: Ing. Andrea Mina Zavala
+        </p>
+      </div>
+
+      <!-- Student Identity Highlight (Clear for Screenshot) -->
+      <div class="bg-gradient-to-r from-sky-50 to-cyan-50 border-3 border-slate-900 rounded-2xl p-3.5 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="text-center sm:text-left">
+          <div class="text-[11px] uppercase font-extrabold text-sky-700 tracking-wider">Estudiante</div>
+          <div id="final-student-name" class="font-game text-lg sm:text-2xl font-extrabold text-slate-900">
+            Nombre del Estudiante
+          </div>
+          <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-1">
+            <span class="bg-slate-900 text-white text-xs font-bold px-2.5 py-0.5 rounded-lg">Curso: 10mo EGB</span>
+            <span id="final-student-parallel" class="bg-amber-400 text-slate-950 border border-slate-900 text-xs font-extrabold px-2.5 py-0.5 rounded-lg">
+              Paralelo: A
+            </span>
+          </div>
+        </div>
+
+        <!-- Score Badge /10 -->
+        <div class="bg-slate-900 text-white border-3 border-amber-400 rounded-2xl px-5 py-3 text-center shadow-md shrink-0">
+          <div class="text-[11px] uppercase font-bold text-amber-300 tracking-wider">Calificación Final</div>
+          <div id="final-score-big" class="font-game text-3xl sm:text-4xl font-extrabold text-lime-400 leading-none my-1">
+            10 / 10
+          </div>
+          <div id="final-percentage" class="text-xs font-bold text-cyan-300">100% de aciertos</div>
+        </div>
+      </div>
+
+      <!-- Detailed Metrics Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4 text-center">
+        <div class="bg-emerald-50 border-2 border-emerald-400 rounded-xl p-2.5">
+          <div class="text-xs font-bold text-emerald-800">✅ Correctas</div>
+          <div id="final-correct-count" class="font-game text-xl sm:text-2xl font-extrabold text-emerald-600">0</div>
+        </div>
+        <div class="bg-rose-50 border-2 border-rose-400 rounded-xl p-2.5">
+          <div class="text-xs font-bold text-rose-800">❌ Incorrectas</div>
+          <div id="final-wrong-count" class="font-game text-xl sm:text-2xl font-extrabold text-rose-600">0</div>
+        </div>
+        <div class="bg-amber-50 border-2 border-amber-400 rounded-xl p-2.5">
+          <div class="text-xs font-bold text-amber-800">⏱️ Tiempo Total</div>
+          <div id="final-time-elapsed" class="font-game text-xl sm:text-2xl font-extrabold text-amber-600">00:00</div>
+        </div>
+        <div class="bg-indigo-50 border-2 border-indigo-400 rounded-xl p-2.5">
+          <div class="text-xs font-bold text-indigo-800">📅 Finalización</div>
+          <div id="final-timestamp" class="text-[11px] sm:text-xs font-extrabold text-indigo-900 mt-1 leading-tight">--/--/----</div>
+        </div>
+      </div>
+
+      <!-- Motivational Message -->
+      <div id="final-motivation-box" class="bg-amber-100 border-2 border-amber-400 rounded-2xl p-3 text-center mb-4">
+        <p id="final-motivation-text" class="text-xs sm:text-sm font-extrabold text-slate-900">
+          ¡Excelente trabajo!
+        </p>
+      </div>
+
+      <!-- Cloud Sync Status & Screenshot Instruction -->
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600 bg-slate-100 rounded-xl p-2.5 mb-4">
+        <span id="cloud-sync-status" class="font-bold text-emerald-700">☁️ Resultado registrado correctamente.</span>
+        <span class="font-bold text-slate-800">📸 Toma una captura de pantalla de esta tarjeta como respaldo.</span>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <button id="btn-play-again" type="button" class="obby-btn flex-1 py-3 rounded-xl bg-cyan-400 text-slate-950 font-game text-base sm:text-lg font-extrabold">
+          🔄 Nueva Partida
+        </button>
+        <button id="btn-final-teacher-panel" type="button" class="obby-btn flex-1 py-3 rounded-xl bg-slate-800 text-white font-game text-base sm:text-lg font-extrabold">
+          📊 Ver Registro Docente
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 6. TEACHER DASHBOARD & CSV EXPORT MODAL ==================== -->
+  <div id="teacher-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+    <div class="obby-card w-full max-w-4xl p-4 sm:p-6 my-auto animate-pop max-h-[92vh] flex flex-col">
+      <!-- Header -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b-2 border-slate-200">
+        <div>
+          <h2 class="font-game text-xl sm:text-2xl font-extrabold text-slate-900">
+            📊 Panel Docente – Registro de Calificaciones
+          </h2>
+          <p class="text-xs font-semibold text-slate-600">
+            Ing. Andrea Mina Zavala • Unidad Educativa El Libertador (10mo EGB)
+          </p>
+        </div>
+        <button id="btn-close-teacher" type="button" class="obby-btn bg-rose-500 text-white px-3.5 py-1.5 rounded-xl text-sm font-bold">
+          ✖ Cerrar
+        </button>
+      </div>
+
+      <!-- Centralized Cloud Sync Config (Firebase Realtime Database URL) -->
+      <div class="bg-sky-50 border-2 border-sky-300 rounded-2xl p-3 mb-3">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div class="flex-1">
+            <label for="input-firebase-url" class="block text-xs font-extrabold text-sky-900 mb-1">
+              ☁️ Enlace de Base de Datos Centralizada (Firebase Realtime Database URL - Opcional):
+            </label>
+            <input
+              id="input-firebase-url"
+              type="url"
+              placeholder="https://tu-proyecto-default-rtdb.firebaseio.com"
+              class="w-full px-3 py-1.5 rounded-xl border-2 border-slate-900 text-xs sm:text-sm font-semibold bg-white text-slate-900"
+            />
+          </div>
+          <div class="flex items-end gap-2">
+            <button id="btn-save-cloud-url" type="button" class="obby-btn bg-cyan-400 text-slate-950 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold">
+              💾 Conectar Nube
+            </button>
+            <button id="btn-copy-share-link" type="button" class="obby-btn bg-amber-300 text-slate-950 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold">
+              🔗 Copiar Enlace Alumnos
+            </button>
+          </div>
+        </div>
+        <p id="teacher-cloud-msg" class="text-[11px] font-bold text-slate-600 mt-1.5">
+          Los resultados se guardan automáticamente en este dispositivo y se sincronizan en la nube si configuras una URL gratuita de Firebase Realtime Database.
+        </p>
+      </div>
+
+      <!-- Filter & Export Actions -->
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-extrabold text-slate-800">Filtrar Paralelo:</span>
+          <select id="filter-parallel" class="border-2 border-slate-900 rounded-xl px-2.5 py-1 text-xs sm:text-sm font-bold bg-white">
+            <option value="ALL">Todos (A y B)</option>
+            <option value="A">Paralelo A</option>
+            <option value="B">Paralelo B</option>
+          </select>
+          <button id="btn-refresh-results" type="button" class="obby-btn bg-slate-200 text-slate-900 px-3 py-1 rounded-xl text-xs font-bold">
+            🔄 Actualizar
+          </button>
+        </div>
+
+        <button id="btn-export-csv" type="button" class="obby-btn bg-emerald-400 text-slate-950 px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold flex items-center gap-1.5">
+          📥 Descargar Excel / CSV
+        </button>
+      </div>
+
+      <!-- Results Table -->
+      <div class="overflow-auto custom-scroll border-2 border-slate-900 rounded-2xl flex-1 min-h-[200px]">
+        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+          <thead class="bg-slate-900 text-white sticky top-0">
+            <tr>
+              <th class="p-2.5 font-bold">#</th>
+              <th class="p-2.5 font-bold">Nombre y Apellido</th>
+              <th class="p-2.5 font-bold text-center">Paralelo</th>
+              <th class="p-2.5 font-bold text-center">Nota (/10)</th>
+              <th class="p-2.5 font-bold text-center">Aciertos</th>
+              <th class="p-2.5 font-bold text-center">%</th>
+              <th class="p-2.5 font-bold text-center">Tiempo</th>
+              <th class="p-2.5 font-bold">Fecha y Hora</th>
+            </tr>
+          </thead>
+          <tbody id="teacher-results-tbody" class="divide-y divide-slate-200 bg-white font-medium text-slate-800">
+            <tr>
+              <td colspan="8" class="p-6 text-center text-slate-500 font-bold">
+                Aún no hay partidas registradas.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT: GAME ENGINE, QUESTIONS & STORAGE ==================== -->
+  <script>
+    /**
+     * 1. EXACT 10 MATH STATIONS DATA (DO NOT MODIFY TEXT, NUMBERS OR OPTIONS)
+     */
+    const MATH_STATIONS = [
+      {
+        id: 1,
+        topic: "Porcentajes",
+        question: "1. Rodrigo tenía cierta cantidad de dinero ahorrado. Decidió utilizar el 20% de sus ahorros para comprar una bicicleta que costó $120. ¿Cuánto dinero tenía ahorrado antes de realizar la compra?",
+        options: ["A) $480", "B) $600", "C) $720", "D) $500"],
+        correctIndex: 1 // B) $600
+      },
+      {
+        id: 2,
+        topic: "Porcentajes",
+        question: "2. Juan adquirió una tablet aprovechando una promoción que ofrecía un descuento del 15%. Después de aplicar el descuento, pagó $340. ¿Cuál era el precio original de la tablet?",
+        options: ["A) $380", "B) $390", "C) $400", "D) $425"],
+        correctIndex: 2 // C) $400
+      },
+      {
+        id: 3,
+        topic: "Porcentajes",
+        question: "3. Una empresa dispone de un terreno rectangular cuyo ancho mide 20 metros y su largo mide 50 metros. Por un proyecto de ampliación, el ancho aumenta un 20%, mientras que el largo disminuye un 40%. ¿Cuál será el área del terreno después de realizar estas modificaciones?",
+        options: ["A) 720 m²", "B) 600 m²", "C) 840 m²", "D) 1.000 m²"],
+        correctIndex: 0 // A) 720 m²
+      },
+      {
+        id: 4,
+        topic: "Porcentajes",
+        question: "4. Una tienda compró una computadora por $800 y decidió incrementar su precio de venta en un 25% sobre el costo. Durante una promoción, ofreció un descuento del 10% sobre el precio de venta. ¿Cuál fue el precio final que pagó el cliente?",
+        options: ["A) $900", "B) $880", "C) $920", "D) $1.000"],
+        correctIndex: 0 // A) $900
+      },
+      {
+        id: 5,
+        topic: "Porcentajes",
+        question: "5. Una institución educativa cuenta con 800 estudiantes. Durante el presente año, la matrícula aumentó un 15% respecto al año anterior. Sin embargo, al finalizar el período, el 10% de los estudiantes matriculados se retiró. ¿Cuántos estudiantes permanecieron en la institución?",
+        options: ["A) 800", "B) 828", "C) 920", "D) 880"],
+        correctIndex: 1 // B) 828
+      },
+      {
+        id: 6,
+        topic: "Sistemas de Ecuaciones",
+        question: "6. En una papelería, una estudiante compró 3 cuadernos y 2 esferográficos por $13. Otra estudiante compró 2 cuadernos y 4 esferográficos por $14. Si ambas compraron los mismos tipos de productos y los precios unitarios son constantes, ¿cuánto cuesta cada cuaderno y cada esferográfico?",
+        options: [
+          "A) Cuaderno: $3; esferográfico: $2",
+          "B) Cuaderno: $4; esferográfico: $1",
+          "C) Cuaderno: $2; esferográfico: $3",
+          "D) Cuaderno: $3; esferográfico: $1"
+        ],
+        correctIndex: 0 // A) Cuaderno: $3; esferográfico: $2
+      },
+      {
+        id: 7,
+        topic: "Sistemas de Ecuaciones",
+        question: "7. La edad de un padre es el triple de la edad de su hijo. Dentro de 8 años, la suma de sus edades será de 64 años. ¿Cuáles son sus edades actuales?",
+        options: [
+          "A) Padre: 36 años; hijo: 12 años",
+          "B) Padre: 42 años; hijo: 14 años",
+          "C) Padre: 39 años; hijo: 13 años",
+          "D) Padre: 45 años; hijo: 15 años"
+        ],
+        correctIndex: 0 // A) Padre: 36 años; hijo: 12 años
+      },
+      {
+        id: 8,
+        topic: "Sistemas de Ecuaciones",
+        question: "8. El perímetro de un terreno rectangular es de 74 metros. Se sabe que el largo supera al ancho en 11 metros. ¿Cuáles son las dimensiones del terreno?",
+        options: [
+          "A) Largo: 24 m; ancho: 13 m",
+          "B) Largo: 25 m; ancho: 12 m",
+          "C) Largo: 26 m; ancho: 11 m",
+          "D) Largo: 22 m; ancho: 15 m"
+        ],
+        correctIndex: 0 // A) Largo: 24 m; ancho: 13 m
+      },
+      {
+        id: 9,
+        topic: "Sistemas de Ecuaciones",
+        question: "9. En un cine se vendieron 120 entradas entre adultos y niños. La entrada de adulto cuesta $8 y la de niño cuesta $5. Si la recaudación total fue de $810, ¿cuántas entradas de cada tipo se vendieron?",
+        options: [
+          "A) 70 adultos y 50 niños",
+          "B) 60 adultos y 60 niños",
+          "C) 80 adultos y 40 niños",
+          "D) 90 adultos y 30 niños"
+        ],
+        correctIndex: 0 // A) 70 adultos y 50 niños
+      },
+      {
+        id: 10,
+        topic: "Sistemas de Ecuaciones",
+        question: "10. En una granja hay gallinas y conejos. En total se cuentan 35 animales y 100 patas. Si todas las gallinas tienen 2 patas y todos los conejos tienen 4 patas, ¿cuántas gallinas y cuántos conejos hay?",
+        options: [
+          "A) 15 gallinas y 20 conejos",
+          "B) 20 gallinas y 15 conejos",
+          "C) 25 gallinas y 10 conejos",
+          "D) 10 gallinas y 25 conejos"
+        ],
+        correctIndex: 1 // B) 20 gallinas y 15 conejos
+      }
+    ];
+
+    /**
+     * 2. WEB AUDIO SYNTHESIZER (Retro Arcade Obby Sound Effects & Optional Loop)
+     */
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.bgmInterval = null;
+        this.step = 0;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playTone(freq, type = 'sine', duration = 0.15, vol = 0.12, delay = 0) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime + delay;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration);
+      }
+      jump() {
+        this.playTone(320, 'square', 0.12, 0.08, 0);
+        this.playTone(540, 'square', 0.14, 0.08, 0.06);
+      }
+      coin() {
+        this.playTone(987.77, 'sine', 0.1, 0.12, 0);
+        this.playTone(1318.51, 'sine', 0.22, 0.12, 0.08);
+      }
+      boost() {
+        this.playTone(440, 'sawtooth', 0.1, 0.09, 0);
+        this.playTone(660, 'sawtooth', 0.12, 0.09, 0.06);
+        this.playTone(880, 'sawtooth', 0.18, 0.09, 0.12);
+      }
+      correct() {
+        this.playTone(523.25, 'triangle', 0.14, 0.16, 0);
+        this.playTone(659.25, 'triangle', 0.14, 0.16, 0.1);
+        this.playTone(783.99, 'triangle', 0.14, 0.16, 0.2);
+        this.playTone(1046.50, 'triangle', 0.35, 0.18, 0.3);
+      }
+      wrong() {
+        this.playTone(260, 'sawtooth', 0.2, 0.14, 0);
+        this.playTone(195, 'sawtooth', 0.32, 0.14, 0.15);
+      }
+      victory() {
+        const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+        notes.forEach((n, i) => this.playTone(n, 'triangle', 0.22, 0.18, i * 0.13));
+      }
+      startBGM() {
+        if (this.bgmInterval) return;
+        const melody = [261.63, 329.63, 392.00, 329.63, 293.66, 349.23, 440.00, 392.00];
+        this.bgmInterval = setInterval(() => {
+          if (!this.muted && gameState.phase === 'RUNNING') {
+            const note = melody[this.step % melody.length];
+            this.playTone(note, 'sine', 0.18, 0.035, 0);
+            this.step++;
+          }
+        }, 380);
+      }
+    }
+    const sfx = new SoundFX();
+
+    /**
+     * 3. CENTRALIZED STORAGE MANAGER (Firebase Realtime DB REST + Local Backup)
+     */
+    const STORAGE_KEY = 'libertador_speedrun_results_v1';
+    const DB_URL_KEY = 'libertador_speedrun_firebase_url';
+
+    function getConfiguredFirebaseUrl() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paramDb = urlParams.get('db');
+      if (paramDb && paramDb.startsWith('http')) {
+        const clean = paramDb.replace(/\/$/, '');
+        localStorage.setItem(DB_URL_KEY, clean);
+        return clean;
+      }
+      return (localStorage.getItem(DB_URL_KEY) || '').replace(/\/$/, '');
+    }
+
+    async function saveStudentResult(record) {
+      // 1. Save locally immediately as backup
+      const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      existing.push(record);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+
+      // 2. Sync to Firebase Realtime Database if configured
+      const fbUrl = getConfiguredFirebaseUrl();
+      const statusEl = document.getElementById('cloud-sync-status');
+      if (fbUrl) {
+        try {
+          const res = await fetch(`${fbUrl}/speedrun_resultados.json`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(record)
+          });
+          if (res.ok) {
+            statusEl.textContent = '☁️ ¡Sincronizado en la nube de la Docente correctamente!';
+            statusEl.className = 'font-bold text-emerald-700';
+            return;
+          }
+        } catch (err) {
+          console.warn('Error sincronizando con Firebase:', err);
+        }
+        statusEl.textContent = '⚠️ Guardado localmente (verifica conexión para nube).';
+        statusEl.className = 'font-bold text-amber-700';
+      } else {
+        statusEl.textContent = '✅ Resultado registrado en el sistema local de evaluación.';
+        statusEl.className = 'font-bold text-emerald-700';
+      }
+    }
+
+    async function fetchAllResults() {
+      let localList = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      const fbUrl = getConfiguredFirebaseUrl();
+      if (fbUrl) {
+        try {
+          const res = await fetch(`${fbUrl}/speedrun_resultados.json`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data === 'object') {
+              const cloudList = Object.values(data);
+              // Merge avoiding duplicates by id
+              const map = new Map();
+              [...localList, ...cloudList].forEach(item => {
+                if (item && item.id) map.set(item.id, item);
+              });
+              return Array.from(map.values());
+            }
+          }
+        } catch (err) {
+          console.warn('No se pudo leer desde Firebase:', err);
+        }
+      }
+      return localList;
+    }
+
+    /**
+     * 4. GAME STATE MANAGEMENT
+     */
+    const gameState = {
+      phase: 'START', // START, RUNNING, QUESTION, FINISH_ANIM, FINAL_REPORT
+      studentName: '',
+      parallel: '',
+      avatar: 'chico',
+      currentStationIndex: 0, // 0 to 9
+      stationResults: [], // array of booleans (true/false)
+      score: 0,
+      coins: 0,
+      totalSeconds: 0,
+      stationTimerSeconds: 180,
+      selectedOption: null,
+      answerConfirmed: false,
+      boostTimer: 0,
+      checkpointPos: { x: 0, y: 1.5, z: 0 }
+    };
+
+    /**
+     * 5. THREE.JS 3D OBBY PARKOUR WORLD SETUP
+     */
+    const canvas = document.getElementById('game-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x38bdf8); // Vibrant bright sky blue
+    scene.fog = new THREE.Fog(0x7dd3fc, 45, 165);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 300);
+
+    // Lighting
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffedd5, 0.85);
+    hemiLight.position.set(0, 50, 0);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.95);
+    dirLight.position.set(25, 45, 20);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 1;
+    dirLight.shadow.camera.far = 150;
+    const d = 40;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    scene.add(dirLight);
+
+    // Glowing Lava Sea below the floating Obby track (inspired by reference image)
+    const lavaGeo = new THREE.PlaneGeometry(400, 1200, 32, 32);
+    const lavaMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+    const lavaMesh = new THREE.Mesh(lavaGeo, lavaMat);
+    lavaMesh.rotation.x = -Math.PI / 2;
+    lavaMesh.position.set(0, -14, -350);
+    scene.add(lavaMesh);
+
+    // Lava glow grid overlay
+    const lavaGrid = new THREE.GridHelper(400, 40, 0xfef08a, 0xea580c);
+    lavaGrid.position.set(0, -13.9, -350);
+    scene.add(lavaGrid);
+
+    // Decorative Fluffy Cartoon Clouds
+    const cloudGroup = new THREE.Group();
+    const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    for (let i = 0; i < 38; i++) {
+      const cluster = new THREE.Group();
+      const puffs = 3 + Math.floor(Math.random() * 3);
+      for (let p = 0; p < puffs; p++) {
+        const geo = new THREE.BoxGeometry(3.5 + Math.random() * 3, 2 + Math.random() * 1.5, 3 + Math.random() * 2.5);
+        const mesh = new THREE.Mesh(geo, cloudMat);
+        mesh.position.set((p - 1) * 2.4, (Math.random() - 0.5) * 1.1, (Math.random() - 0.5) * 1.5);
+        cluster.add(mesh);
+      }
+      cluster.position.set(
+        (Math.random() > 0.5 ? 1 : -1) * (18 + Math.random() * 45),
+        10 + Math.random() * 18,
+        40 - i * 22
+      );
+      cloudGroup.add(cluster);
+    }
+    scene.add(cloudGroup);
+
+    // Track Data Structures
+    const platforms = []; // { mesh, minX, maxX, topY, minZ, maxZ }
+    const movingObstacles = []; // { mesh, baseX, rangeX, speed, phase, radius }
+    const speedPads = []; // { mesh, x, y, z, radius }
+    const collectibles = []; // { mesh, collected }
+    const stationGates = []; // { index, z, archGroup, badgeMesh, triggered }
+    let finishLineZ = -650;
+    let finishArchGroup = null;
+
+    // Helper to create a platform and register collision AABB
+    function addPlatform(x, y, z, w, h, d, colorHex, isRainbow = false) {
+      let mat;
+      if (isRainbow) {
+        // Create canvas texture with rainbow stripes like the reference image
+        const c = document.createElement('canvas');
+        c.width = 256;
+        c.height = 64;
+        const ctx = c.getContext('2d');
+        const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7'];
+        const stripeW = c.width / colors.length;
+        colors.forEach((col, idx) => {
+          ctx.fillStyle = col;
+          ctx.fillRect(idx * stripeW, 0, stripeW + 1, c.height);
+        });
+        const tex = new THREE.CanvasTexture(c);
+        mat = new THREE.MeshLambertMaterial({ map: tex });
+      } else {
+        mat = new THREE.MeshLambertMaterial({ color: colorHex });
+      }
+
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y - h / 2, z);
+      mesh.receiveShadow = true;
+      mesh.castShadow = true;
+
+      // Crisp dark cartoon outline border effect via edges
+      const edges = new THREE.EdgesGeometry(geo);
+      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x0f172a }));
+      mesh.add(line);
+
+      scene.add(mesh);
+      platforms.push({
+        mesh,
+        minX: x - w / 2,
+        maxX: x + w / 2,
+        topY: y,
+        minZ: z - d / 2,
+        maxZ: z + d / 2
+      });
+      return mesh;
+    }
+
+    // Helper to create glowing neon chevron speed pad
+    function addSpeedPad(x, y, z) {
+      const padGroup = new THREE.Group();
+      const baseGeo = new THREE.BoxGeometry(2.4, 0.16, 3.2);
+      const baseMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
+      const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+      padGroup.add(baseMesh);
+
+      const arrowGeo = new THREE.ConeGeometry(0.75, 1.3, 3);
+      const arrowMat = new THREE.MeshBasicMaterial({ color: 0xf97316 });
+      const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+      arrow.rotation.x = -Math.PI / 2;
+      arrow.position.y = 0.14;
+      padGroup.add(arrow);
+
+      padGroup.position.set(x, y + 0.08, z);
+      scene.add(padGroup);
+      speedPads.push({ mesh: padGroup, x, y, z, radius: 1.8 });
+    }
+
+    // Helper to create spinning gold coin / star
+    function addCoin(x, y, z) {
+      const geo = new THREE.CylinderGeometry(0.55, 0.55, 0.18, 16);
+      const mat = new THREE.MeshLambertMaterial({ color: 0xfacc15, emissive: 0xca8a04, emissiveIntensity: 0.35 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.z = Math.PI / 2;
+      mesh.position.set(x, y + 1.1, z);
+      scene.add(mesh);
+      collectibles.push({ mesh, collected: false });
+    }
+
+    // Helper to create moving obstacle (forgiving push/jump block)
+    function addMovingObstacle(x, y, z, rangeX, speed, colorHex = 0xef4444) {
+      const geo = new THREE.BoxGeometry(2.4, 1.3, 1.3);
+      const mat = new THREE.MeshLambertMaterial({ color: colorHex });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y + 0.65, z);
+      mesh.castShadow = true;
+      const edges = new THREE.EdgesGeometry(geo);
+      mesh.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x0f172a })));
+      scene.add(mesh);
+      movingObstacles.push({
+        mesh,
+        baseX: x,
+        rangeX,
+        speed,
+        phase: Math.random() * Math.PI * 2,
+        halfW: 1.2,
+        halfH: 0.65,
+        halfD: 0.65
+      });
+    }
+
+    // Helper to create Station Gate & Checkpoint Flag
+    function addStationGate(stationIdx, zPos) {
+      const archGroup = new THREE.Group();
+      archGroup.position.set(0, 0, zPos);
+
+      // Left & Right Pillars
+      const pillarGeo = new THREE.BoxGeometry(0.9, 6.2, 0.9);
+      const pillarMat = new THREE.MeshLambertMaterial({ color: 0x0284c7 });
+      const leftPillar = new THREE.Mesh(pillarGeo, pillarMat);
+      leftPillar.position.set(-4.6, 3.1, 0);
+      const rightPillar = new THREE.Mesh(pillarGeo, pillarMat);
+      rightPillar.position.set(4.6, 3.1, 0);
+      archGroup.add(leftPillar, rightPillar);
+
+      // Top Banner with Station Number Texture
+      const bannerCanvas = document.createElement('canvas');
+      bannerCanvas.width = 512;
+      bannerCanvas.height = 128;
+      const bCtx = bannerCanvas.getContext('2d');
+      bCtx.fillStyle = '#0f172a';
+      bCtx.fillRect(0, 0, 512, 128);
+      bCtx.strokeStyle = '#38bdf8';
+      bCtx.lineWidth = 10;
+      bCtx.strokeRect(6, 6, 500, 116);
+      bCtx.fillStyle = '#facc15';
+      bCtx.font = 'bold 48px Fredoka, sans-serif';
+      bCtx.textAlign = 'center';
+      bCtx.textBaseline = 'middle';
+      bCtx.fillText(`ESTACIÓN ${stationIdx + 1} / 10`, 256, 66);
+
+      const bannerTex = new THREE.CanvasTexture(bannerCanvas);
+      const topGeo = new THREE.BoxGeometry(10.2, 1.8, 1.1);
+      const topMat = new THREE.MeshBasicMaterial({ map: bannerTex });
+      const topBanner = new THREE.Mesh(topGeo, topMat);
+      topBanner.position.set(0, 6.5, 0);
+      archGroup.add(topBanner);
+
+      // Glowing Forcefield Curtain (disappears once solved)
+      const fieldGeo = new THREE.PlaneGeometry(8.4, 5.6);
+      const fieldMat = new THREE.MeshBasicMaterial({
+        color: 0x22d3ee,
+        transparent: true,
+        opacity: 0.35,
+        side: THREE.DoubleSide
+      });
+      const fieldMesh = new THREE.Mesh(fieldGeo, fieldMat);
+      fieldMesh.position.set(0, 2.8, 0);
+      archGroup.add(fieldMesh);
+
+      // Checkpoint Flag on Left Side
+      const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, 3.2);
+      const poleMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0 });
+      const pole = new THREE.Mesh(poleGeo, poleMat);
+      pole.position.set(-5.6, 1.6, 1.2);
+      const flagGeo = new THREE.BoxGeometry(1.2, 0.8, 0.1);
+      const flagMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+      const flag = new THREE.Mesh(flagGeo, flagMat);
+      flag.position.set(-5.0, 2.7, 1.2);
+      archGroup.add(pole, flag);
+
+      scene.add(archGroup);
+      stationGates.push({
+        index: stationIdx,
+        z: zPos,
+        archGroup,
+        fieldMesh,
+        triggered: false
+      });
+    }
+
+    // Build the Entire 10-Station Parkour Circuit
+    function buildObbyTrack() {
+      // Starting Plaza
+      addPlatform(0, 0, 4, 12, 1.5, 16, 0x38bdf8, true);
+
+      const segmentSpacing = 56; // Quick ~8-12 seconds traversal per segment
+      const vibrantColors = [0xfacc15, 0x4ade80, 0x22d3ee, 0xfb923c, 0xa855f7];
+
+      for (let i = 0; i < 10; i++) {
+        const startZ = -4 - i * segmentSpacing;
+        const gateZ = startZ - segmentSpacing + 8;
+
+        // Design fun, forgiving, varied parkour obstacles between stations
+        const pattern = i % 4;
+        if (pattern === 0) {
+          // Rainbow bridge + Speed Boost + Moving Bumper
+          addPlatform(0, 0, startZ - 14, 9, 1.4, 24, 0x38bdf8, true);
+          addSpeedPad(0, 0, startZ - 10);
+          addCoin(-2.2, 0, startZ - 16);
+          addCoin(2.2, 0, startZ - 20);
+          addMovingObstacle(0, 0, startZ - 22, 2.8, 2.2, 0xef4444);
+          addPlatform(0, 0, startZ - 36, 10, 1.4, 18, vibrantColors[i % vibrantColors.length], false);
+        } else if (pattern === 1) {
+          // Floating Colorful Stepping Platforms + Alternative Shortcut Path
+          addPlatform(0, 0, startZ - 8, 8, 1.4, 10, 0xfacc15, false);
+          // Main wide path (left/center)
+          addPlatform(-1.8, 0.3, startZ - 20, 5.2, 1.4, 11, 0x4ade80, false);
+          // Alternative Speed Shortcut (right)
+          addPlatform(3.4, 0.5, startZ - 20, 3.2, 1.4, 11, 0x22d3ee, false);
+          addSpeedPad(3.4, 0.5, startZ - 20);
+          addCoin(3.4, 0.5, startZ - 17);
+          addCoin(-1.8, 0.3, startZ - 20);
+          // Landing bridge before station
+          addPlatform(0, 0, startZ - 35, 10, 1.4, 18, 0x38bdf8, true);
+        } else if (pattern === 2) {
+          // Ramp & Elevated Neon Deck + Jump Gap
+          addPlatform(0, 0, startZ - 10, 9, 1.4, 14, 0xfb923c, false);
+          addSpeedPad(0, 0, startZ - 8);
+          addCoin(0, 1.2, startZ - 18);
+          addPlatform(0, 0.4, startZ - 24, 8.5, 1.4, 10, 0x22d3ee, false);
+          addMovingObstacle(0, 0.4, startZ - 24, 2.6, 2.6, 0xec4899);
+          addPlatform(0, 0, startZ - 37, 10, 1.4, 15, 0x4ade80, false);
+        } else {
+          // Twin Rainbow Lanes with Coins & Boosts
+          addPlatform(-2.4, 0, startZ - 16, 4.2, 1.4, 26, 0x38bdf8, true);
+          addPlatform(2.4, 0, startZ - 16, 4.2, 1.4, 26, 0x38bdf8, true);
+          addSpeedPad(-2.4, 0, startZ - 14);
+          addCoin(2.4, 0, startZ - 12);
+          addCoin(2.4, 0, startZ - 18);
+          addCoin(-2.4, 0, startZ - 22);
+          addPlatform(0, 0, startZ - 36, 10, 1.4, 16, 0xfacc15, false);
+        }
+
+        // Station Safe Platform & Gate
+        addPlatform(0, 0, gateZ, 12, 1.6, 12, 0xe0f2fe, false);
+        addStationGate(i, gateZ);
+      }
+
+      // Final Stretch & Spectacular Finish Line Arch after Station 10
+      const lastStationZ = -4 - 9 * segmentSpacing - segmentSpacing + 8;
+      finishLineZ = lastStationZ - 34;
+      addPlatform(0, 0, lastStationZ - 20, 12, 1.6, 36, 0x38bdf8, true);
+      addSpeedPad(0, 0, lastStationZ - 12);
+      addCoin(-2, 0, lastStationZ - 18);
+      addCoin(0, 0, lastStationZ - 22);
+      addCoin(2, 0, lastStationZ - 26);
+
+      // Build Checkered Rainbow Finish Line Arch
+      finishArchGroup = new THREE.Group();
+      finishArchGroup.position.set(0, 0, finishLineZ);
+
+      const fPillarGeo = new THREE.BoxGeometry(1.2, 8, 1.2);
+      const fPillarMat = new THREE.MeshLambertMaterial({ color: 0xfacc15 });
+      const pL = new THREE.Mesh(fPillarGeo, fPillarMat);
+      pL.position.set(-5.5, 4, 0);
+      const pR = new THREE.Mesh(fPillarGeo, fPillarMat);
+      pR.position.set(5.5, 4, 0);
+      finishArchGroup.add(pL, pR);
+
+      // Checkered Finish Banner
+      const fCanvas = document.createElement('canvas');
+      fCanvas.width = 512;
+      fCanvas.height = 128;
+      const fCtx = fCanvas.getContext('2d');
+      const sq = 32;
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 16; c++) {
+          fCtx.fillStyle = (r + c) % 2 === 0 ? '#ffffff' : '#0f172a';
+          fCtx.fillRect(c * sq, r * sq, sq, sq);
+        }
+      }
+      fCtx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+      fCtx.fillRect(96, 24, 320, 80);
+      fCtx.fillStyle = '#facc15';
+      fCtx.font = 'bold 46px Fredoka, sans-serif';
+      fCtx.textAlign = 'center';
+      fCtx.textBaseline = 'middle';
+      fCtx.fillText('🏁 ¡META FINAL! 🏁', 256, 66);
+
+      const fTex = new THREE.CanvasTexture(fCanvas);
+      const fTop = new THREE.Mesh(new THREE.BoxGeometry(12.4, 2.2, 1.4), new THREE.MeshBasicMaterial({ map: fTex }));
+      fTop.position.set(0, 8.2, 0);
+      finishArchGroup.add(fTop);
+
+      scene.add(finishArchGroup);
+    }
+
+    buildObbyTrack();
+
+    /**
+     * 6. 3D BLOCKY CARTOON RUNNER AVATAR (CHICO / CHICA)
+     */
+    const playerGroup = new THREE.Group();
+    scene.add(playerGroup);
+
+    let leftLeg, rightLeg, leftArm, rightArm, headMesh, torsoMesh, hairGroup;
+
+    function buildRunnerCharacter(type = 'chico') {
+      while (playerGroup.children.length > 0) {
+        playerGroup.remove(playerGroup.children[0]);
+      }
+
+      const skinMat = new THREE.MeshLambertMaterial({ color: 0xffdbac });
+      const shirtColor = type === 'chico' ? 0x0284c7 : 0xec4899; // Bright blue hoodie or vibrant pink jacket
+      const pantsColor = type === 'chico' ? 0x1e293b : 0x4f46e5;
+      const shoeColor = type === 'chico' ? 0x10b981 : 0xfacc15;
+
+      const shirtMat = new THREE.MeshLambertMaterial({ color: shirtColor });
+      const pantsMat = new THREE.MeshLambertMaterial({ color: pantsColor });
+      const shoeMat = new THREE.MeshLambertMaterial({ color: shoeColor });
+
+      // Torso
+      torsoMesh = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.25, 0.65), shirtMat);
+      torsoMesh.position.y = 1.65;
+      torsoMesh.castShadow = true;
+      playerGroup.add(torsoMesh);
+
+      // Backpack (inspired by reference image)
+      const packMat = new THREE.MeshLambertMaterial({ color: type === 'chico' ? 0xf97316 : 0x22d3ee });
+      const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 0.38), packMat);
+      backpack.position.set(0, 1.68, 0.48);
+      playerGroup.add(backpack);
+
+      // Head
+      headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.95), skinMat);
+      headMesh.position.y = 2.8;
+      headMesh.castShadow = true;
+      playerGroup.add(headMesh);
+
+      // Eyes & Smile on Front (-Z face since runner faces -Z)
+      const faceCanvas = document.createElement('canvas');
+      faceCanvas.width = 128;
+      faceCanvas.height = 128;
+      const ctx = faceCanvas.getContext('2d');
+      ctx.fillStyle = '#ffdbac';
+      ctx.fillRect(0, 0, 128, 128);
+      // Eyes
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(42, 52, 9, 0, Math.PI * 2);
+      ctx.arc(86, 52, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(45, 49, 3, 0, Math.PI * 2);
+      ctx.arc(89, 49, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Happy smile
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(64, 72, 20, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.stroke();
+
+      const faceTex = new THREE.CanvasTexture(faceCanvas);
+      const facePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 0.88), new THREE.MeshBasicMaterial({ map: faceTex }));
+      facePlane.position.set(0, 2.8, -0.48);
+      facePlane.rotation.y = Math.PI;
+      playerGroup.add(facePlane);
+
+      // Stylized Hair
+      hairGroup = new THREE.Group();
+      const hairMat = new THREE.MeshLambertMaterial({ color: type === 'chico' ? 0x1e1b4b : 0x7c2d12 });
+      const topHair = new THREE.Mesh(new THREE.BoxGeometry(1.04, 0.35, 1.04), hairMat);
+      topHair.position.y = 3.35;
+      hairGroup.add(topHair);
+
+      if (type === 'chico') {
+        // Colorful spiky neon highlights like the cover character!
+        const spikeColors = [0x22d3ee, 0xfacc15, 0xec4899];
+        spikeColors.forEach((sc, idx) => {
+          const spike = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.32, 0.5), new THREE.MeshLambertMaterial({ color: sc }));
+          spike.position.set((idx - 1) * 0.3, 3.55, -0.1);
+          spike.rotation.x = 0.25;
+          hairGroup.add(spike);
+        });
+      } else {
+        // Ponytail & visor bow for Chica
+        const backHair = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.85, 0.3), hairMat);
+        backHair.position.set(0, 2.85, 0.45);
+        const ponytail = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.75, 0.4), new THREE.MeshLambertMaterial({ color: 0xfacc15 }));
+        ponytail.position.set(0, 2.95, 0.75);
+        ponytail.rotation.x = 0.35;
+        hairGroup.add(backHair, ponytail);
+      }
+      playerGroup.add(hairGroup);
+
+      // Arms
+      leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.38, 1.1, 0.38), shirtMat);
+      leftArm.position.set(-0.82, 1.65, 0);
+      rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.38, 1.1, 0.38), shirtMat);
+      rightArm.position.set(0.82, 1.65, 0);
+      playerGroup.add(leftArm, rightArm);
+
+      // Legs + Shoes
+      leftLeg = new THREE.Group();
+      const lPant = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.85, 0.46), pantsMat);
+      lPant.position.y = -0.42;
+      const lShoe = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.25, 0.6), shoeMat);
+      lShoe.position.set(0, -0.92, -0.06);
+      leftLeg.add(lPant, lShoe);
+      leftLeg.position.set(-0.28, 1.05, 0);
+
+      rightLeg = new THREE.Group();
+      const rPant = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.85, 0.46), pantsMat);
+      rPant.position.y = -0.42;
+      const rShoe = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.25, 0.6), shoeMat);
+      rShoe.position.set(0, -0.92, -0.06);
+      rightLeg.add(rPant, rShoe);
+      rightLeg.position.set(0.28, 1.05, 0);
+
+      playerGroup.add(leftLeg, rightLeg);
+    }
+
+    buildRunnerCharacter('chico');
+
+    // Player Physics State
+    const playerPhys = {
+      x: 0,
+      y: 0.2,
+      z: 2,
+      vx: 0,
+      vy: 0,
+      vz: 0,
+      onGround: true,
+      crouching: false,
+      runCycle: 0
+    };
+
+    // Keyboard & Touch Input State
+    const keys = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      jump: false
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        if (gameState.phase === 'RUNNING') e.preventDefault();
+      }
+      if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = true;
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = true;
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+      if (e.code === 'Space') {
+        keys.jump = true;
+        triggerJump();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = false;
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') keys.down = false;
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+      if (e.code === 'Space') keys.jump = false;
+    });
+
+    function triggerJump() {
+      if (gameState.phase === 'RUNNING' && playerPhys.onGround) {
+        playerPhys.vy = 13.5;
+        playerPhys.onGround = false;
+        sfx.jump();
+      }
+    }
+
+    // Bind Mobile Touch Pad Controls
+    function bindTouchButton(btnId, keyName, isJump = false) {
+      const el = document.getElementById(btnId);
+      if (!el) return;
+      const press = (e) => {
+        e.preventDefault();
+        el.classList.add('pressed');
+        if (isJump) {
+          triggerJump();
+        } else {
+          keys[keyName] = true;
+        }
+      };
+      const release = (e) => {
+        e.preventDefault();
+        el.classList.remove('pressed');
+        if (!isJump) keys[keyName] = false;
+      };
+      el.addEventListener('touchstart', press, { passive: false });
+      el.addEventListener('touchend', release, { passive: false });
+      el.addEventListener('mousedown', press);
+      el.addEventListener('mouseup', release);
+      el.addEventListener('mouseleave', release);
+    }
+    bindTouchButton('touch-left', 'left');
+    bindTouchButton('touch-right', 'right');
+    bindTouchButton('touch-up', 'up');
+    bindTouchButton('touch-down', 'down');
+    bindTouchButton('touch-jump', 'jump', true);
+
+    function respawnAtCheckpoint() {
+      playerPhys.x = gameState.checkpointPos.x;
+      playerPhys.y = gameState.checkpointPos.y + 0.5;
+      playerPhys.z = gameState.checkpointPos.z;
+      playerPhys.vx = 0;
+      playerPhys.vy = 0;
+      playerPhys.vz = 0;
+      playerPhys.onGround = true;
+    }
+
+    /**
+     * 7. UI & GAME FLOW CONTROLLERS
+     */
+    const elStartScreen = document.getElementById('start-screen');
+    const elGameHud = document.getElementById('game-hud');
+    const elMathModal = document.getElementById('math-modal');
+    const elFinishScreen = document.getElementById('finish-celebration-screen');
+    const elFinalReport = document.getElementById('final-report-screen');
+    const elTeacherModal = document.getElementById('teacher-modal');
+
+    // Initialize 10 HUD progress bars
+    function renderProgressSegments() {
+      const container = document.getElementById('hud-progress-segments');
+      container.innerHTML = '';
+      for (let i = 0; i < 10; i++) {
+        const seg = document.createElement('div');
+        const completed = i < gameState.stationResults.length;
+        const isCurrent = i === gameState.currentStationIndex && gameState.phase !== 'FINAL_REPORT';
+        seg.className = `h-2.5 sm:h-3 rounded-full border border-slate-950 transition-all duration-300 ${
+          completed
+            ? 'bg-lime-400 shadow-[0_0_8px_#a3e635]'
+            : isCurrent
+            ? 'bg-cyan-400 animate-pulse'
+            : 'bg-slate-700'
+        }`;
+        container.appendChild(seg);
+      }
+      const completedCount = gameState.stationResults.length;
+      const remaining = 10 - completedCount;
+      document.getElementById('hud-station-status').textContent =
+        completedCount < 10
+          ? `🏁 Estación actual: ${completedCount + 1} de 10`
+          : `🏁 ¡10 de 10 Estaciones completadas! Corre a la Meta`;
+      document.getElementById('hud-remaining-status').textContent =
+        remaining > 0
+          ? `Faltan ${remaining} desafío${remaining === 1 ? '' : 's'} para la meta`
+          : `¡Recta final hacia la Meta!`;
+    }
+
+    function formatMMSS(totalSec) {
+      const m = Math.floor(totalSec / 60);
+      const s = Math.floor(totalSec % 60);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // Parallel Selection Buttons
+    document.querySelectorAll('.parallel-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        gameState.parallel = btn.dataset.parallel;
+        document.querySelectorAll('.parallel-btn').forEach(b => {
+          b.classList.remove('bg-amber-400', 'ring-4', 'ring-cyan-400');
+          b.classList.add('bg-slate-100');
+        });
+        btn.classList.remove('bg-slate-100');
+        btn.classList.add('bg-amber-400', 'ring-4', 'ring-cyan-400');
+        document.getElementById('start-validation-msg').classList.add('hidden');
+      });
+    });
+
+    // Avatar Selection Buttons
+    document.querySelectorAll('.avatar-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        gameState.avatar = btn.dataset.avatar;
+        document.querySelectorAll('.avatar-btn').forEach(b => {
+          b.classList.remove('bg-cyan-400', 'ring-4', 'ring-amber-400');
+          b.classList.add('bg-slate-100');
+        });
+        btn.classList.remove('bg-slate-100');
+        btn.classList.add('bg-cyan-400', 'ring-4', 'ring-amber-400');
+        buildRunnerCharacter(gameState.avatar);
+      });
+    });
+
+    // Start Game Button Validation
+    document.getElementById('btn-start-game').addEventListener('click', () => {
+      const nameVal = document.getElementById('input-student-name').value.trim();
+      if (nameVal.length < 3 || !gameState.parallel) {
+        const msg = document.getElementById('start-validation-msg');
+        msg.classList.remove('hidden');
+        msg.classList.remove('animate-shake');
+        void msg.offsetWidth;
+        msg.classList.add('animate-shake');
+        return;
+      }
+
+      gameState.studentName = nameVal;
+      gameState.currentStationIndex = 0;
+      gameState.stationResults = [];
+      gameState.score = 0;
+      gameState.coins = 0;
+      gameState.totalSeconds = 0;
+      gameState.boostTimer = 0;
+      gameState.checkpointPos = { x: 0, y: 0.2, z: 2 };
+
+      // Reset gates & coins
+      stationGates.forEach(g => {
+        g.triggered = false;
+        g.fieldMesh.visible = true;
+      });
+      collectibles.forEach(c => {
+        c.collected = false;
+        c.mesh.visible = true;
+      });
+
+      buildRunnerCharacter(gameState.avatar);
+      respawnAtCheckpoint();
+
+      // Update HUD
+      document.getElementById('hud-avatar-icon').textContent = gameState.avatar === 'chico' ? '👦' : '👧';
+      document.getElementById('hud-player-name').textContent = gameState.studentName;
+      document.getElementById('hud-player-parallel').textContent = `10mo EGB - Paralelo ${gameState.parallel}`;
+      document.getElementById('hud-coins').textContent = '0';
+      document.getElementById('hud-action-banner').textContent =
+        '🏃 ¡Corre hacia el Portal de la Estación 1! (Usa Flechas / WASD + Espacio)';
+      renderProgressSegments();
+
+      elStartScreen.classList.add('hidden');
+      elFinalReport.classList.add('hidden');
+      elGameHud.classList.remove('hidden');
+
+      gameState.phase = 'RUNNING';
+      sfx.init();
+      sfx.startBGM();
+    });
+
+    // Audio Mute Toggle
+    document.getElementById('btn-toggle-audio').addEventListener('click', (e) => {
+      sfx.muted = !sfx.muted;
+      e.currentTarget.textContent = sfx.muted ? '🔇' : '🔊';
+    });
+
+    // Checkpoint Respawn Button
+    document.getElementById('btn-respawn').addEventListener('click', () => {
+      if (gameState.phase === 'RUNNING') respawnAtCheckpoint();
+    });
+
+    /**
+     * 8. MATH STATION CHALLENGE LOGIC (3-MINUTE TIMER + STRICT VALIDATION)
+     */
+    function openMathStation(stationIdx) {
+      const station = MATH_STATIONS[stationIdx];
+      gameState.phase = 'QUESTION';
+      gameState.selectedOption = null;
+      gameState.answerConfirmed = false;
+      gameState.stationTimerSeconds = 180; // 3 minutes = 180 seconds
+
+      // Reset keys so character doesn't keep walking when modal closes
+      Object.keys(keys).forEach(k => (keys[k] = false));
+
+      document.getElementById('modal-station-badge').textContent = `ESTACIÓN ${station.id} / 10`;
+      document.getElementById('modal-topic-badge').textContent = `Tema: ${station.topic}`;
+      document.getElementById('modal-question-text').textContent = station.question;
+      document.getElementById('modal-station-timer').textContent = '03:00';
+      document.getElementById('modal-timer-box').classList.remove('border-red-500');
+
+      const feedbackBox = document.getElementById('modal-feedback-box');
+      feedbackBox.classList.add('hidden');
+
+      const btnConfirm = document.getElementById('btn-confirm-answer');
+      const btnContinue = document.getElementById('btn-continue-race');
+      btnConfirm.classList.remove('hidden');
+      btnConfirm.disabled = true;
+      btnContinue.classList.add('hidden');
+
+      const optsContainer = document.getElementById('modal-options-container');
+      optsContainer.innerHTML = '';
+
+      station.options.forEach((optText, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className =
+          'option-choice-btn obby-btn text-left p-3.5 sm:p-4 rounded-2xl bg-white hover:bg-sky-50 text-slate-900 font-bold text-sm sm:text-base transition';
+        btn.textContent = optText;
+        btn.addEventListener('click', () => {
+          if (gameState.answerConfirmed) return;
+          gameState.selectedOption = idx;
+          document.querySelectorAll('.option-choice-btn').forEach(b => {
+            b.classList.remove('bg-cyan-300', 'ring-4', 'ring-amber-400');
+            b.classList.add('bg-white');
+          });
+          btn.classList.remove('bg-white');
+          btn.classList.add('bg-cyan-300', 'ring-4', 'ring-amber-400');
+          btnConfirm.disabled = false;
+        });
+        optsContainer.appendChild(btn);
+      });
+
+      elMathModal.classList.remove('hidden');
+    }
+
+    function evaluateStationAnswer(isTimeout = false) {
+      if (gameState.answerConfirmed) return;
+      gameState.answerConfirmed = true;
+
+      const station = MATH_STATIONS[gameState.currentStationIndex];
+      const isCorrect = !isTimeout && gameState.selectedOption === station.correctIndex;
+
+      // Record academic grade strictly 1 or 0
+      gameState.stationResults.push(isCorrect);
+      if (isCorrect) {
+        gameState.score += 1;
+      }
+
+      // Lock all option buttons
+      const optBtns = document.querySelectorAll('.option-choice-btn');
+      optBtns.forEach((btn, idx) => {
+        btn.disabled = true;
+        if (idx === gameState.selectedOption) {
+          btn.classList.remove('bg-cyan-300');
+          btn.classList.add(isCorrect ? 'bg-emerald-400' : 'bg-rose-400');
+        }
+      });
+
+      const feedbackBox = document.getElementById('modal-feedback-box');
+      feedbackBox.classList.remove('hidden');
+
+      if (isCorrect) {
+        sfx.correct();
+        gameState.boostTimer = 6.0; // Unlock 6 seconds of Turbo Speed Boost on next track segment!
+        feedbackBox.className =
+          'rounded-2xl p-3.5 mb-4 border-3 border-emerald-600 bg-emerald-100 text-emerald-950 font-extrabold text-center text-sm sm:text-base animate-pop';
+        feedbackBox.innerHTML =
+          '🎉 ¡RESPUESTA CORRECTA! Has desbloqueado el siguiente tramo y activado un <span class="text-orange-600">⚡ TURBO DE VELOCIDAD</span>.';
+      } else {
+        sfx.wrong();
+        const modalCard = document.getElementById('math-modal-card');
+        modalCard.classList.remove('animate-shake');
+        void modalCard.offsetWidth;
+        modalCard.classList.add('animate-shake');
+
+        feedbackBox.className =
+          'rounded-2xl p-3.5 mb-4 border-3 border-rose-600 bg-rose-100 text-rose-950 font-extrabold text-center text-sm sm:text-base';
+        feedbackBox.innerHTML = isTimeout
+          ? '⏰ ¡Se agotó el tiempo de 3 minutos! No te rindas, sigue adelante e inténtalo en la siguiente estación.'
+          : '💪 ¡Respuesta incorrecta! No te rindas, sigue adelante y demuestra tu talento en el siguiente desafío.';
+      }
+
+      // Open current station barrier and update checkpoint
+      const gate = stationGates[gameState.currentStationIndex];
+      if (gate) {
+        gate.triggered = true;
+        gate.fieldMesh.visible = false;
+        gameState.checkpointPos = { x: 0, y: 0.2, z: gate.z - 2 };
+      }
+
+      renderProgressSegments();
+
+      document.getElementById('btn-confirm-answer').classList.add('hidden');
+      document.getElementById('btn-continue-race').classList.remove('hidden');
+    }
+
+    document.getElementById('btn-confirm-answer').addEventListener('click', () => {
+      if (gameState.selectedOption !== null) {
+        evaluateStationAnswer(false);
+      }
+    });
+
+    document.getElementById('btn-continue-race').addEventListener('click', () => {
+      elMathModal.classList.add('hidden');
+      gameState.currentStationIndex += 1;
+
+      if (gameState.currentStationIndex < 10) {
+        document.getElementById('hud-action-banner').textContent =
+          `🏃 ¡Avanza hacia la Estación ${gameState.currentStationIndex + 1} de 10!`;
+      } else {
+        document.getElementById('hud-action-banner').textContent =
+          '🏁 ¡TODAS LAS ESTACIONES COMPLETADAS! ¡Corre hacia la META FINAL!';
+      }
+
+      gameState.phase = 'RUNNING';
+      if (gameState.boostTimer > 0) {
+        sfx.boost();
+      }
+    });
+
+    /**
+     * 9. FINISH LINE & FINAL REPORT CERTIFICATE
+     */
+    function triggerFinishLine() {
+      if (gameState.phase === 'FINISH_ANIM' || gameState.phase === 'FINAL_REPORT') return;
+      gameState.phase = 'FINISH_ANIM';
+      sfx.victory();
+      elGameHud.classList.add('hidden');
+      elFinishScreen.classList.remove('hidden');
+    }
+
+    document.getElementById('btn-show-final-result').addEventListener('click', async () => {
+      elFinishScreen.classList.add('hidden');
+      gameState.phase = 'FINAL_REPORT';
+
+      const correctCount = gameState.score;
+      const wrongCount = 10 - correctCount;
+      const percentage = Math.round((correctCount / 10) * 100);
+      const timeFormatted = formatMMSS(gameState.totalSeconds);
+      const now = new Date();
+      const timestampStr = now.toLocaleString('es-EC', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+      document.getElementById('final-student-name').textContent = gameState.studentName;
+      document.getElementById('final-student-parallel').textContent = `Paralelo: ${gameState.parallel}`;
+      document.getElementById('final-score-big').textContent = `${correctCount} / 10`;
+      document.getElementById('final-percentage').textContent = `${percentage}% de aciertos`;
+      document.getElementById('final-correct-count').textContent = correctCount;
+      document.getElementById('final-wrong-count').textContent = wrongCount;
+      document.getElementById('final-time-elapsed').textContent = timeFormatted;
+      document.getElementById('final-timestamp').textContent = timestampStr;
+
+      // Tailored motivational message
+      let motMsg = '';
+      if (correctCount >= 9) {
+        motMsg = '🌟 ¡DESEMPEÑO SOBRESALIENTE! Dominas el razonamiento matemático con gran precisión y velocidad.';
+      } else if (correctCount >= 7) {
+        motMsg = '🚀 ¡MUY BUEN TRABAJO! Has demostrado excelentes habilidades analíticas en porcentajes y ecuaciones.';
+      } else if (correctCount >= 5) {
+        motMsg = '👏 ¡BUEN ESFUERZO! Completaste el circuito. Sigue practicando para alcanzar la máxima puntuación.';
+      } else {
+        motMsg = '💪 ¡CARRERA COMPLETADA! Cada desafío es una oportunidad para aprender. Repasa los ejercicios y vuelve a intentarlo.';
+      }
+      document.getElementById('final-motivation-text').textContent = motMsg;
+
+      elFinalReport.classList.remove('hidden');
+
+      // Persist result centrally & locally
+      const record = {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        nombre: gameState.studentName,
+        paralelo: gameState.parallel,
+        puntaje: correctCount,
+        correctas: correctCount,
+        incorrectas: wrongCount,
+        porcentaje: `${percentage}%`,
+        tiempo: timeFormatted,
+        fechaHora: timestampStr
+      };
+      await saveStudentResult(record);
+    });
+
+    document.getElementById('btn-play-again').addEventListener('click', () => {
+      elFinalReport.classList.add('hidden');
+      elStartScreen.classList.remove('hidden');
+      gameState.phase = 'START';
+    });
+
+    /**
+     * 10. TEACHER DASHBOARD & CSV / EXCEL EXPORT
+     */
+    async function renderTeacherTable() {
+      const tbody = document.getElementById('teacher-results-tbody');
+      const filter = document.getElementById('filter-parallel').value;
+      const allResults = await fetchAllResults();
+
+      const filtered = allResults.filter(r => filter === 'ALL' || r.paralelo === filter);
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="p-6 text-center text-slate-500 font-bold">
+              No hay registros disponibles para el filtro seleccionado.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered
+        .map(
+          (r, idx) => `
+          <tr class="hover:bg-sky-50">
+            <td class="p-2.5 font-bold">${idx + 1}</td>
+            <td class="p-2.5 font-extrabold text-slate-900">${r.nombre}</td>
+            <td class="p-2.5 text-center font-bold">
+              <span class="px-2 py-0.5 rounded bg-amber-200 border border-slate-900 text-xs">${r.paralelo}</span>
+            </td>
+            <td class="p-2.5 text-center font-extrabold text-emerald-700">${r.puntaje} / 10</td>
+            <td class="p-2.5 text-center font-bold">${r.correctas} ✅ / ${r.incorrectas} ❌</td>
+            <td class="p-2.5 text-center font-bold">${r.porcentaje}</td>
+            <td class="p-2.5 text-center font-bold">${r.tiempo}</td>
+            <td class="p-2.5 text-xs font-semibold text-slate-600">${r.fechaHora}</td>
+          </tr>
+        `
+        )
+        .join('');
+    }
+
+    function openTeacherModal() {
+      document.getElementById('input-firebase-url').value = getConfiguredFirebaseUrl();
+      elTeacherModal.classList.remove('hidden');
+      renderTeacherTable();
+    }
+
+    document.getElementById('btn-open-teacher').addEventListener('click', openTeacherModal);
+    document.getElementById('btn-final-teacher-panel').addEventListener('click', openTeacherModal);
+    document.getElementById('btn-close-teacher').addEventListener('click', () => {
+      elTeacherModal.classList.add('hidden');
+    });
+    document.getElementById('filter-parallel').addEventListener('change', renderTeacherTable);
+    document.getElementById('btn-refresh-results').addEventListener('click', renderTeacherTable);
+
+    document.getElementById('btn-save-cloud-url').addEventListener('click', () => {
+      const val = document.getElementById('input-firebase-url').value.trim().replace(/\/$/, '');
+      localStorage.setItem(DB_URL_KEY, val);
+      const msg = document.getElementById('teacher-cloud-msg');
+      if (val) {
+        msg.textContent = '✅ URL de Firebase guardada. Usa "Copiar Enlace Alumnos" para compartir el juego ya conectado.';
+        msg.className = 'text-[11px] font-bold text-emerald-700 mt-1.5';
+      } else {
+        msg.textContent = 'ℹ️ URL borrada. Usando almacenamiento local del navegador.';
+        msg.className = 'text-[11px] font-bold text-slate-600 mt-1.5';
+      }
+      renderTeacherTable();
+    });
+
+    document.getElementById('btn-copy-share-link').addEventListener('click', () => {
+      const baseUrl = window.location.href.split('?')[0];
+      const fbUrl = getConfiguredFirebaseUrl();
+      const shareLink = fbUrl ? `${baseUrl}?db=${encodeURIComponent(fbUrl)}` : baseUrl;
+
+      const tempInput = document.createElement('input');
+      tempInput.value = shareLink;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      const msg = document.getElementById('teacher-cloud-msg');
+      msg.textContent = `🔗 ¡Enlace copiado al portapapeles! Compártelo con tus estudiantes: ${shareLink}`;
+      msg.className = 'text-[11px] font-bold text-sky-700 mt-1.5 break-all';
+    });
+
+    // Export Results to Excel-Compatible CSV (with UTF-8 BOM)
+    document.getElementById('btn-export-csv').addEventListener('click', async () => {
+      const allResults = await fetchAllResults();
+      const filter = document.getElementById('filter-parallel').value;
+      const rows = allResults.filter(r => filter === 'ALL' || r.paralelo === filter);
+
+      const headers = [
+        'Institucion',
+        'Curso',
+        'Asignatura',
+        'Docente',
+        'Nombre y Apellido',
+        'Paralelo',
+        'Puntaje sobre 10',
+        'Respuestas Correctas',
+        'Respuestas Incorrectas',
+        'Porcentaje de Aciertos',
+        'Tiempo Empleado',
+        'Fecha y Hora de Finalizacion'
+      ];
+
+      const csvLines = [headers.join(';')];
+      rows.forEach(r => {
+        const line = [
+          '"Unidad Educativa El Libertador"',
+          '"10mo EGB"',
+          '"Desarrollo del Pensamiento - Razonamiento Matematico"',
+          '"Ing. Andrea Mina Zavala"',
+          `"${(r.nombre || '').replace(/"/g, '""')}"`,
+          `"${r.paralelo}"`,
+          r.puntaje,
+          r.correctas,
+          r.incorrectas,
+          `"${r.porcentaje}"`,
+          `"${r.tiempo}"`,
+          `"${r.fechaHora}"`
+        ];
+        csvLines.push(line.join(';'));
+      });
+
+      const csvContent = '\uFEFF' + csvLines.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Resultados_SpeedRun_10moEGB_${filter}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    /**
+     * 11. MAIN 60FPS ANIMATION & PHYSICS LOOP
+     */
+    let lastTime = performance.now();
+    let timerAccumulator = 0;
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+
+      // Animate Lava Grid & Clouds continuously
+      lavaGrid.position.z = -350 + ((now * 0.004) % 10);
+      collectibles.forEach(c => {
+        if (!c.collected) {
+          c.mesh.rotation.y += 3 * dt;
+        }
+      });
+
+      // Animate Moving Obstacles
+      movingObstacles.forEach(obs => {
+        obs.phase += obs.speed * dt;
+        obs.mesh.position.x = obs.baseX + Math.sin(obs.phase) * obs.rangeX;
+      });
+
+      // Timers while actively playing or answering
+      if (gameState.phase === 'RUNNING' || gameState.phase === 'QUESTION') {
+        timerAccumulator += dt;
+        if (timerAccumulator >= 1.0) {
+          timerAccumulator -= 1.0;
+          gameState.totalSeconds += 1;
+          document.getElementById('hud-total-time').textContent = formatMMSS(gameState.totalSeconds);
+
+          if (gameState.phase === 'QUESTION' && !gameState.answerConfirmed) {
+            gameState.stationTimerSeconds -= 1;
+            const tEl = document.getElementById('modal-station-timer');
+            tEl.textContent = formatMMSS(Math.max(0, gameState.stationTimerSeconds));
+            if (gameState.stationTimerSeconds <= 20) {
+              document.getElementById('modal-timer-box').classList.add('border-red-500');
+            }
+            if (gameState.stationTimerSeconds <= 0) {
+              evaluateStationAnswer(true); // Timeout triggers error & allows continuing
+            }
+          }
+        }
+      }
+
+      // Runner Movement & Collision during RUNNING phase
+      if (gameState.phase === 'RUNNING') {
+        if (gameState.boostTimer > 0) {
+          gameState.boostTimer -= dt;
+          document.getElementById('hud-boost-badge').classList.remove('hidden');
+        } else {
+          document.getElementById('hud-boost-badge').classList.add('hidden');
+        }
+
+        const speedMultiplier = gameState.boostTimer > 0 ? 1.55 : 1.0;
+        const moveSpeed = 12.5 * speedMultiplier;
+        const strafeSpeed = 10.0;
+
+        // Forward / Backward (-Z is forward)
+        let forwardInput = 0;
+        if (keys.up) forwardInput -= 1;
+        if (keys.down) {
+          playerPhys.crouching = true;
+          playerGroup.scale.y = 0.62;
+        } else {
+          playerPhys.crouching = false;
+          playerGroup.scale.y = 1.0;
+        }
+
+        let sideInput = 0;
+        if (keys.left) sideInput -= 1;
+        if (keys.right) sideInput += 1;
+
+        playerPhys.vz = forwardInput * moveSpeed;
+        playerPhys.vx = sideInput * strafeSpeed;
+
+        // Apply Gravity
+        playerPhys.vy -= 32 * dt;
+
+        // Tentative next position
+        const nextX = playerPhys.x + playerPhys.vx * dt;
+        const nextY = playerPhys.y + playerPhys.vy * dt;
+        const nextZ = playerPhys.z + playerPhys.vz * dt;
+
+        // Platform Floor Collision
+        let landed = false;
+        for (const p of platforms) {
+          if (
+            nextX >= p.minX - 0.35 &&
+            nextX <= p.maxX + 0.35 &&
+            nextZ >= p.minZ - 0.35 &&
+            nextZ <= p.maxZ + 0.35
+          ) {
+            if (playerPhys.y >= p.topY - 0.3 && nextY <= p.topY && playerPhys.vy <= 0) {
+              playerPhys.y = p.topY;
+              playerPhys.vy = 0;
+              landed = true;
+              break;
+            }
+          }
+        }
+        playerPhys.onGround = landed;
+        if (!landed) {
+          playerPhys.y = nextY;
+        }
+
+        playerPhys.x = nextX;
+        playerPhys.z = nextZ;
+
+        // Respawn automatically if player falls toward lava
+        if (playerPhys.y < -5.5) {
+          sfx.wrong();
+          respawnAtCheckpoint();
+        }
+
+        // Check Speed Boost Pads
+        for (const pad of speedPads) {
+          const dx = playerPhys.x - pad.x;
+          const dz = playerPhys.z - pad.z;
+          if (Math.hypot(dx, dz) < pad.radius && Math.abs(playerPhys.y - pad.y) < 1.5) {
+            if (gameState.boostTimer < 1.5) sfx.boost();
+            gameState.boostTimer = 2.5;
+          }
+        }
+
+        // Check Collectible Coins (Visual/Audio feedback only)
+        for (const c of collectibles) {
+          if (!c.collected) {
+            const dx = playerPhys.x - c.mesh.position.x;
+            const dz = playerPhys.z - c.mesh.position.z;
+            if (Math.hypot(dx, dz) < 1.35) {
+              c.collected = true;
+              c.mesh.visible = false;
+              gameState.coins += 1;
+              document.getElementById('hud-coins').textContent = gameState.coins;
+              sfx.coin();
+            }
+          }
+        }
+
+        // Check Moving Obstacles (Gentle bounce back if touched)
+        for (const obs of movingObstacles) {
+          const dx = Math.abs(playerPhys.x - obs.mesh.position.x);
+          const dz = Math.abs(playerPhys.z - obs.mesh.position.z);
+          const dy = playerPhys.y - (obs.mesh.position.y - obs.halfH);
+          if (dx < obs.halfW + 0.4 && dz < obs.halfD + 0.4 && dy >= -0.2 && dy < obs.halfH * 1.8) {
+            playerPhys.z += 2.2; // Gentle knockback so student never gets stuck
+            sfx.wrong();
+          }
+        }
+
+        // Check if Player Reached Current Station Gate
+        if (gameState.currentStationIndex < 10) {
+          const gate = stationGates[gameState.currentStationIndex];
+          if (gate && !gate.triggered && playerPhys.z <= gate.z + 1.2) {
+            playerPhys.z = gate.z + 1.2;
+            openMathStation(gameState.currentStationIndex);
+          }
+        }
+
+        // Check if Player Crossed the Finish Line after Station 10
+        if (gameState.currentStationIndex >= 10 && playerPhys.z <= finishLineZ + 1.2) {
+          triggerFinishLine();
+        }
+
+        // Limbs Running Animation
+        const horizontalSpeed = Math.hypot(playerPhys.vx, playerPhys.vz);
+        if (horizontalSpeed > 0.5 && playerPhys.onGround) {
+          playerPhys.runCycle += dt * 14 * speedMultiplier;
+          leftLeg.rotation.x = Math.sin(playerPhys.runCycle) * 0.75;
+          rightLeg.rotation.x = -Math.sin(playerPhys.runCycle) * 0.75;
+          leftArm.rotation.x = -Math.sin(playerPhys.runCycle) * 0.65;
+          rightArm.rotation.x = Math.sin(playerPhys.runCycle) * 0.65;
+        } else {
+          leftLeg.rotation.x *= 0.8;
+          rightLeg.rotation.x *= 0.8;
+          leftArm.rotation.x *= 0.8;
+          rightArm.rotation.x *= 0.8;
+        }
+      } else if (gameState.phase === 'START') {
+        // Idle showcase rotation on Start Screen
+        playerPhys.x = 0;
+        playerPhys.y = 0.2;
+        playerPhys.z = 2;
+        playerGroup.rotation.y = Math.sin(now * 0.0015) * 0.35;
+      } else if (gameState.phase === 'FINISH_ANIM') {
+        // Victory jump celebration at Finish Line
+        playerPhys.y = 0.2 + Math.abs(Math.sin(now * 0.008)) * 2.2;
+        playerGroup.rotation.y += 4 * dt;
+      }
+
+      if (gameState.phase !== 'START' && gameState.phase !== 'FINISH_ANIM') {
+        playerGroup.rotation.y = 0;
+      }
+
+      playerGroup.position.set(playerPhys.x, playerPhys.y, playerPhys.z);
+
+      // Smooth Third-Person Camera Follow
+      const targetCamX = playerPhys.x * 0.65;
+      const targetCamY = playerPhys.y + 6.2;
+      const targetCamZ = playerPhys.z + 11.5;
+      camera.position.x += (targetCamX - camera.position.x) * 0.12;
+      camera.position.y += (targetCamY - camera.position.y) * 0.12;
+      camera.position.z += (targetCamZ - camera.position.z) * 0.15;
+      camera.lookAt(playerPhys.x * 0.5, playerPhys.y + 2.0, playerPhys.z - 8);
+
+      renderer.render(scene, camera);
+    }
+
+    // Handle Window Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Start Animation Loop on Load
+    window.onload = function () {
+      animate(performance.now());
+    };
+  </script>
+</body>
+</html>
